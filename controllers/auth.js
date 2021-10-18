@@ -32,7 +32,7 @@ class AuthController {
             // console.log(userPass[0],userPass[1], "INI USER")
             !user && res.status(401).json("Wrong Credentials");
             const hashPassword = CryptoJS.AES.decrypt(
-                user.password,
+                user.password
             )
             
             const password =  hashPassword.toString(CryptoJS.enc.Utf8);
