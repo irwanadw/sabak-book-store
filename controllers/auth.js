@@ -1,18 +1,25 @@
 const User = require("../models/User");
 const CryptoJS = require("crypto-js");
 const {v4 : uuidv4} = require('uuid');
-const secretPass = uuidv4();
+const secretKey = uuidv4();
+const bcrypt = require('bcrypt');
+const jwt = require("jsonwebtoken");
+
 
 
 class AuthController {
     static async register(req,res) {
         try {
+            
+            const salt = await bcrypt.genSalt(10)
+            const hashPassword = await bcrypt.hash(req.body.password, salt)
+
             const newUser = new User({
                 username: req.body.username,
                 email: req.body.email,
-                password: CryptoJS.AES.encrypt(req.body.password, JSON.stringify({secretPass})).toString()
+                password: hashPassword
+                // password: CryptoJS.AES.encrypt(req.body.password, JSON.stringify({secretPass})).toString()
             });
-
             const savedUser = await newUser.save();
             res.status(201).json(savedUser);
 
@@ -26,19 +33,21 @@ class AuthController {
             const user = await User.findOne({
                 username: req.body.username
             })
-            const secretKey = user.password.split("/")
-            console.log(secretKey[1])
-            // const userPass = user.password.split("/");
-            // console.log(userPass[0],userPass[1], "INI USER")
             !user && res.status(401).json("Wrong Credentials");
-            const hashPassword = CryptoJS.AES.decrypt(
-                user.password
+
+            const isPasswordMatch = await bcrypt.compare(req.body.password, user.password);
+            
+            const accesToken = jwt.sign({
+                id: user._id,
+                isAdmin:  user.isAdmin
+            },
+            process.env.SECRET_KEY,
+            {expiresIn: "1d"}
             )
             
-            const password =  hashPassword.toString(CryptoJS.enc.Utf8);
-            password !== req.body.password && res.status(401).json("Wrong password")
-            
-            res.status(200).json(user)
+            const{ password, ...others} = user._doc;
+            isPasswordMatch == true ? res.status(200).json({...others, accesToken}) : res.status(401).json("Wrong password"); 
+
         } catch (error) {
             console.log(error)
             res.status(500).json({message: `${error} this is an error`});
@@ -47,3 +56,4 @@ class AuthController {
 }
 
 module.exports = AuthController;
+
