@@ -19,10 +19,10 @@ const ProductSchema = new mongoose.Schema(
             type: Array,
             required: true
         },
-        size: {
+        publisher: {
             type: String,
         },
-        color: {
+        author: {
             type: String,
         },
         price: {
